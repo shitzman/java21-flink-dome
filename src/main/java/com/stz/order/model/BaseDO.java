@@ -1,4 +1,4 @@
-package com.stz;
+package com.stz.order.model;
 
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
