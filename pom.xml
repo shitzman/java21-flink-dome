@@ -1,0 +1,324 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.stz</groupId>
+  <artifactId>java21-flink12</artifactId>
+  <version>1.0-SNAPSHOT</version>
+  <packaging>jar</packaging>
+
+  <name>java21-flink12</name>
+  <description>实时商户交易统计系统 - Flink CDC 完整解决方案</description>
+  <url>http://maven.apache.org</url>
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <maven.compiler.source>21</maven.compiler.source>
+    <maven.compiler.target>21</maven.compiler.target>
+
+    <!-- ========== 核心版本配置 ========== -->
+    <!-- 按照原始方案：Flink 1.20 + CDC 3.2 -->
+    <flink.version>1.20.1</flink.version>
+    <cdc.version>3.2.0</cdc.version>
+
+    <!-- 依赖版本 -->
+    <fastjson2.version>2.0.52</fastjson2.version>
+    <okhttp.version>4.12.0</okhttp.version>
+    <logback.version>1.4.14</logback.version>
+    <lombok.version>1.18.30</lombok.version>
+  </properties>
+
+  <!-- ========== 仓库配置 (关键！) ========== -->
+  <repositories>
+    <!-- Maven 中央仓库 -->
+    <repository>
+      <id>central</id>
+      <name>Maven Central Repository</name>
+      <url>https://repo.maven.apache.org/maven2</url>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+    </repository>
+
+    <!-- Apache Flink 官方仓库 (Flink 1.20) -->
+    <repository>
+      <id>apache</id>
+      <name>Apache Repository</name>
+      <url>https://repository.apache.org/content/repositories/releases</url>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+    </repository>
+
+    <!-- Ververica/Flink CDC 仓库 -->
+    <repository>
+      <id>ververica-releases</id>
+      <name>Ververica Releases Repository</name>
+      <url>https://oss.sonatype.org/content/repositories/releases</url>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+    </repository>
+
+    <!-- Apache Snapshots (备用) -->
+    <repository>
+      <id>apache-snapshots</id>
+      <name>Apache Snapshots Repository</name>
+      <url>https://repository.apache.org/content/repositories/snapshots</url>
+      <releases>
+        <enabled>false</enabled>
+      </releases>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+    </repository>
+  </repositories>
+
+  <dependencies>
+
+    <!-- ==================== Flink Core Dependencies ==================== -->
+    <dependency>
+      <groupId>org.apache.flink</groupId>
+      <artifactId>flink-streaming-java</artifactId>
+      <version>${flink.version}</version>
+      <exclusions>
+        <!-- 排除 Flink 自带的 SLF4J 绑定，使用 Logback -->
+        <exclusion>
+          <groupId>org.slf4j</groupId>
+          <artifactId>slf4j-simple</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.flink</groupId>
+      <artifactId>flink-clients</artifactId>
+      <version>${flink.version}</version>
+      <exclusions>
+        <!-- 排除 Flink 自带的 SLF4J 绑定，使用 Logback -->
+        <exclusion>
+          <groupId>org.slf4j</groupId>
+          <artifactId>slf4j-simple</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.flink</groupId>
+      <artifactId>flink-connector-base</artifactId>
+      <version>${flink.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.flink</groupId>
+      <artifactId>flink-runtime-web</artifactId>
+      <version>${flink.version}</version>
+    </dependency>
+
+    <!-- ==================== Flink CDC Dependencies ==================== -->
+    <!-- 使用新的 Apache 坐标 (如果可用) 或 Ververica 坐标 -->
+    <dependency>
+      <groupId>org.apache.flink</groupId>
+      <artifactId>flink-connector-mysql-cdc</artifactId>
+      <version>${cdc.version}</version>
+    </dependency>
+
+    <!-- Fallback: Ververica CDC (如果 Apache 坐标不可用) -->
+<!--    <dependency>-->
+<!--      <groupId>com.ververica</groupId>-->
+<!--      <artifactId>flink-connector-mysql-cdc</artifactId>-->
+<!--      <version>${cdc.version}</version>-->
+<!--      <optional>true</optional>-->
+<!--    </dependency>-->
+
+    <!-- ==================== Flink Metrics ==================== -->
+    <dependency>
+      <groupId>org.apache.flink</groupId>
+      <artifactId>flink-metrics-jmx</artifactId>
+      <version>${flink.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.flink</groupId>
+      <artifactId>flink-metrics-slf4j</artifactId>
+      <version>${flink.version}</version>
+    </dependency>
+
+    <!-- ==================== Flink Table API ==================== -->
+    <dependency>
+      <groupId>org.apache.flink</groupId>
+      <artifactId>flink-table-api-java-bridge</artifactId>
+      <version>${flink.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.flink</groupId>
+      <artifactId>flink-table-planner-loader</artifactId>
+      <version>${flink.version}</version>
+    </dependency>
+
+    <!-- ==================== 序列化库 ==================== -->
+    <dependency>
+      <groupId>com.alibaba.fastjson2</groupId>
+      <artifactId>fastjson2</artifactId>
+      <version>${fastjson2.version}</version>
+    </dependency>
+
+    <!-- ==================== HTTP 客户端 ==================== -->
+    <dependency>
+      <groupId>com.squareup.okhttp3</groupId>
+      <artifactId>okhttp</artifactId>
+      <version>${okhttp.version}</version>
+    </dependency>
+
+    <!-- ==================== 日志 ==================== -->
+    <!-- SLF4J API -->
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <version>2.0.9</version>
+    </dependency>
+
+    <!-- Logback 实现 -->
+    <dependency>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-classic</artifactId>
+      <version>${logback.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-core</artifactId>
+      <version>${logback.version}</version>
+    </dependency>
+
+    <!-- Logback 异步支持 -->
+    <dependency>
+      <groupId>net.logstash.logback</groupId>
+      <artifactId>logstash-logback-encoder</artifactId>
+      <version>7.4</version>
+    </dependency>
+
+    <!-- ==================== 工具库 ==================== -->
+    <dependency>
+      <groupId>org.projectlombok</groupId>
+      <artifactId>lombok</artifactId>
+      <version>${lombok.version}</version>
+      <scope>provided</scope>
+    </dependency>
+
+    <!-- ==================== 测试 ==================== -->
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.13.2</version>
+      <scope>test</scope>
+    </dependency>
+
+  </dependencies>
+
+  <build>
+    <finalName>${project.artifactId}-${project.version}</finalName>
+
+    <plugins>
+      <!-- Maven Compiler Plugin -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.12.1</version>
+        <configuration>
+          <source>21</source>
+          <target>21</target>
+          <!-- Java 21 requires these for Flink -->
+          <compilerArgs>
+            <arg>--add-opens</arg>
+            <arg>java.base/java.util=ALL-UNNAMED</arg>
+            <arg>--add-opens</arg>
+            <arg>java.base/java.lang=ALL-UNNAMED</arg>
+            <arg>--add-opens</arg>
+            <arg>java.base/java.lang.invoke=ALL-UNNAMED</arg>
+            <arg>--add-opens</arg>
+            <arg>java.base/java.nio=ALL-UNNAMED</arg>
+            <arg>--add-opens</arg>
+            <arg>java.base/sun.nio.ch=ALL-UNNAMED</arg>
+          </compilerArgs>
+          <release>21</release>
+        </configuration>
+      </plugin>
+
+      <!-- Maven Shade Plugin for Fat JAR -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>3.5.1</version>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <configuration>
+              <artifactSet>
+                <includes>
+                  <include>com.alibaba.fastjson2:*</include>
+                  <include>com.squareup.okhttp3:*</include>
+                  <include>io.micrometer:*</include>
+                </includes>
+              </artifactSet>
+              <transformers>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                  <mainClass>com.stz.example2.next.MerchantTransactionStatsWithSnapshot</mainClass>
+                </transformer>
+              </transformers>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- Exec Maven Plugin -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>3.1.1</version>
+        <configuration>
+          <mainClass>com.stz.example2.next.MerchantTransactionStatsWithSnapshot</mainClass>
+          <arguments>
+            <argument>--add-opens</argument>
+            <argument>java.base/java.util=ALL-UNNAMED</argument>
+            <argument>--add-opens</argument>
+            <argument>java.base/java.lang=ALL-UNNAMED</argument>
+            <argument>--add-opens</argument>
+            <argument>java.base/java.lang.invoke=ALL-UNNAMED</argument>
+            <argument>--add-opens</argument>
+            <argument>java.base/java.nio=ALL-UNNAMED</argument>
+            <argument>--add-opens</argument>
+            <argument>java.base/sun.nio.ch=ALL-UNNAMED</argument>
+          </arguments>
+        </configuration>
+      </plugin>
+
+      <!-- Surefire Plugin for Tests -->
+<!--      <plugin>-->
+<!--        <groupId>org.apache.maven.surefire.plugins</groupId>-->
+<!--        <artifactId>maven-surefire-plugin</artifactId>-->
+<!--        <version>3.2.2</version>-->
+<!--        <configuration>-->
+<!--          <argLine>-->
+<!--            &#45;&#45;add-opens java.base/java.util=ALL-UNNAMED-->
+<!--            &#45;&#45;add-opens java.base/java.lang=ALL-UNNAMED-->
+<!--          </argLine>-->
+<!--        </configuration>-->
+<!--      </plugin>-->
+
+    </plugins>
+  </build>
+
+</project>
