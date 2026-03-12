@@ -3,6 +3,7 @@ package com.stz.order;
 import com.stz.order.model.CdcChangeEvent;
 import com.stz.order.model.MerchantStats;
 import com.stz.order.sink.MerchantStatsLogSink;
+import com.stz.order.sink.MerchantStatsRabbitMQSink;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.cdc.connectors.mysql.source.MySqlSource;
@@ -107,14 +108,32 @@ public class MerchantTransactionStatsWithSnapshotAPP {
         MySqlSource<String> mySqlSource = buildMySqlCdcSource();
         env.setParallelism(1); //并行度为1
         // 原始 CDC 事件
-        env.fromSource(
+        SingleOutputStreamOperator<MerchantStats> merchantStats = env.fromSource(
                         mySqlSource,
                         WatermarkStrategy.noWatermarks(),
                         "MySQL-CDC-Source"
                 ).map(new CdcEventMapper()).name("Parse-CDC-Events")
                 .map(new EventCategorizer()).name("Categorize-Events")
                 .keyBy(event -> event.getMchNo()).process(new MerchantStatsHandler())
-                .name("Process-Merchant-Stats").print();
+                .name("Process-Merchant-Stats");
+
+        // ========== 输出结果 ==========
+        // 1. 控制台输出
+        merchantStats.print("【实时商户统计】")
+                .name("Print-Stats").setParallelism(1);
+
+        // 2. RabbitMQ 输出（示例配置，请根据实际环境修改）
+        merchantStats.addSink(new MerchantStatsRabbitMQSink(
+                "192.168.0.99",  // RabbitMQ 主机
+                5672,         // RabbitMQ 端口
+                "admin",      // 用户名
+                "StrongPassword123",      // 密码
+                "merchant-stats-queue"  // 队列名称
+        )).name("RabbitMQ-Sink").setParallelism(1);
+
+        // 3. 日志文件输出（可选）
+        // merchantStats.addSink(new MerchantStatsLogSink("【实时商户统计2】", true))
+        //         .name("Log-Stats-Sink").setParallelism(1);
         // 分类处理
 //        SingleOutputStreamOperator<CdcChangeEvent> categorizedEvents = rawEvents
 //                .map(new EventCategorizer())

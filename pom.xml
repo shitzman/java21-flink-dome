@@ -152,6 +152,20 @@
       <version>${flink.version}</version>
     </dependency>
 
+    <!-- ==================== Flink RabbitMQ Connector ==================== -->
+    <dependency>
+      <groupId>org.apache.flink</groupId>
+      <artifactId>flink-connector-rabbitmq</artifactId>
+      <version>${flink.version}</version>
+    </dependency>
+
+    <!-- RabbitMQ Client -->
+    <dependency>
+      <groupId>com.rabbitmq</groupId>
+      <artifactId>amqp-client</artifactId>
+      <version>5.16.0</version>
+    </dependency>
+
     <!-- ==================== Flink Table API ==================== -->
     <dependency>
       <groupId>org.apache.flink</groupId>
