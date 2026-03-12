@@ -8,9 +8,9 @@
     <!-- 彩色控制台输出 -->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <!-- 详细的日志格式，包含时间、级别、线程、类名、方法等 -->
+            <!-- 详细的日志格式，包含时间、级别、线程、类名、方法等 yyyy-MM-dd -->
             <pattern>
-                %d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36}.%M\(%line\) - %msg%n
+                %d{HH:mm:ss} [%thread] %-5level %logger{36}.%M\(%line\) - %msg%n
             </pattern>
             <charset>UTF-8</charset>
         </encoder>

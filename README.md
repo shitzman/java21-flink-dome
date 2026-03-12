@@ -3,6 +3,12 @@
 2. CDC 版本：3.2.0
 3. Java 版本：Java 21
 
+## 运行
+java8+ 环境需要设置vm参数
+```shell
+--add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED   --add-opens java.base/java.time=ALL-UNNAMED
+```
+
 ```html
 
   ========== 核心架构 ==========

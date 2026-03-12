@@ -2,6 +2,7 @@ package com.stz.order;
 
 import com.stz.order.model.CdcChangeEvent;
 import com.stz.order.model.MerchantStats;
+import com.stz.order.sink.MerchantStatsLogSink;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.cdc.connectors.mysql.source.MySqlSource;
@@ -104,30 +105,34 @@ public class MerchantTransactionStatsWithSnapshotAPP {
 
         // ========== 构建数据流 ==========
         MySqlSource<String> mySqlSource = buildMySqlCdcSource();
-
+        env.setParallelism(1); //并行度为1
         // 原始 CDC 事件
-        DataStream<CdcChangeEvent> rawEvents = env.fromSource(
+        env.fromSource(
                         mySqlSource,
                         WatermarkStrategy.noWatermarks(),
                         "MySQL-CDC-Source"
-                ).setParallelism(1)
-                .map(new CdcEventMapper())
-                .name("Parse-CDC-Events");
-
+                ).map(new CdcEventMapper()).name("Parse-CDC-Events")
+                .map(new EventCategorizer()).name("Categorize-Events")
+                .keyBy(event -> event.getMchNo()).process(new MerchantStatsHandler())
+                .name("Process-Merchant-Stats").print();
         // 分类处理
-        SingleOutputStreamOperator<CdcChangeEvent> categorizedEvents = rawEvents
-                .map(new EventCategorizer())
-                .name("Categorize-Events");
+//        SingleOutputStreamOperator<CdcChangeEvent> categorizedEvents = rawEvents
+//                .map(new EventCategorizer())
+//                .name("Categorize-Events");
 
         // 状态处理
-        SingleOutputStreamOperator<MerchantStats> merchantStats = categorizedEvents
-                .keyBy(event -> event.getMchNo())
-                .process(new MerchantStatsHandler())
-                .name("Process-Merchant-Stats");
+//        SingleOutputStreamOperator<MerchantStats> merchantStats = rawEvents
+//                .map(new EventCategorizer())
+//                .name("Categorize-Events")
+//                .keyBy(event -> event.getMchNo())
+//                .process(new MerchantStatsHandler())
+//                .name("Process-Merchant-Stats").setParallelism(1);
 
         // ========== 输出结果 Skills ==========
-        merchantStats.print("【实时商户统计】")
-                .name("Print-Stats");
+//        merchantStats.print("【实时商户统计】")
+//                .name("Print-Stats").setParallelism(1);
+//        merchantStats.addSink(new MerchantStatsLogSink("【实时商户统计2】", true))
+//                .name("Log-Stats-Sink").setParallelism(1);
 
         // ========== 执行任务 ==========
         try {
@@ -168,6 +173,9 @@ public class MerchantTransactionStatsWithSnapshotAPP {
         // ========== 日志配置 ==========
         conf.setString("jobmanager.logs.dir", "/tmp/flink-logs");
         conf.setString("taskmanager.logs.dir", "/tmp/flink-logs");
+//        conf.setString("taskmanager.memory.network.fraction", "0.2");
+        conf.setString("taskmanager.memory.network.max", "256mb");
+        conf.setString("taskmanager.memory.network.min", "256mb");
 
         log.info("Flink 配置已创建");
         return conf;
@@ -234,6 +242,7 @@ public class MerchantTransactionStatsWithSnapshotAPP {
                 // 2. 快照完成后自动切换到 Binlog 增量模式
                 // 3. Checkpoint 记录了切换点，恢复时从该点继续
                 .startupOptions(StartupOptions.initial())
+//                .startupOptions(StartupOptions.timestamp(System.currentTimeMillis() - 1 * 60 * 60 * 1000))
 
                 // ========== 性能优化配置 ==========
                 // 连接池大小
@@ -244,6 +253,7 @@ public class MerchantTransactionStatsWithSnapshotAPP {
 
                 // 增量快照块大小（用于分块读取大表）
 //                .chunkSize(8192)
+                .splitSize(8192)
 
                 // 获取增量快照块的超时时间
                 .fetchSize(2048)
